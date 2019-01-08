@@ -1,0 +1,21 @@
+{
+    "require-dev": {
+        "eaglewu/swoole-ide-helper": "dev-master"
+    },
+    "require": {
+        "illuminate/support": "^5.7",
+        "illuminate/database": "^5.7",
+        "guzzlehttp/guzzle": "^6.3",
+        "thesoftwarefanatics/php-html-parser": "1.8.1"
+    },
+    "autoload": {
+        "classmap": [
+        ],
+        "files": [
+        ],
+        "psr-4": {
+            "Models\\": "models/",
+            "App\\": "./"
+        }
+    }
+}
