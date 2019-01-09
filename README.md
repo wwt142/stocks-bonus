@@ -41,4 +41,6 @@ CREATE TABLE `bonus` (
   KEY `idx_stock_code` (`stock_code`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='红利、派息';
 
+待完善
+
 ```
