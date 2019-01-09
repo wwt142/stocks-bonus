@@ -4,14 +4,16 @@ namespace App;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use Swoole\Coroutine\Http\Client;
+use Swlib\Saber;
 use Swoole\Runtime;
 
 class Stock
 {
     CONST STOCK_SEARCH_HOST = 'xueqiu.com';
 
-    private $cookies = [];
+    CONST STOCK_SEARCH_BASE_URL = 'https://xueqiu.com';
+
+    protected $stocks = [];
 
     private $totalPage = 0;
 
@@ -26,6 +28,11 @@ class Stock
         'Accept-Encoding' => 'gzip',
     ];
 
+    /**
+     * @var Saber
+     */
+    private $client;
+
     public function __construct()
     {
         Runtime::enableCoroutine();
@@ -36,7 +43,14 @@ class Stock
     public function run()
     {
         go(function () {
-            $result = $this->getStockList(10);
+            $this->client = Saber::session([
+                'base_uri' => self::STOCK_SEARCH_BASE_URL,
+                'redirect' => 0,
+                'headers'  => $this->headers,
+                'use_pool' => true
+            ]);
+            $this->getStockList(20);
+            saber_pool_release();
         });
     }
 
@@ -45,15 +59,7 @@ class Stock
      */
     public function initCookie()
     {
-        if (!$this->cookies) {
-            $client = new Client(self::STOCK_SEARCH_HOST, 443, true);
-            $client->get('/');
-            $this->cookies = $client->cookies;
-            $client->close();
-
-        }
-
-        return $this->cookies;
+        $this->client->get('/');
     }
 
     /**
@@ -62,13 +68,9 @@ class Stock
      */
     public function initTotalPage()
     {
-        $client = new Client(self::STOCK_SEARCH_HOST, 443, true);
-        $client->setHeaders($this->headers);
-        $client->setCookies($this->getReqCookie());
-        $client->set(['timeout' => 3]);
         $time = time();
-        $client->get('/stock/screener/screen.json?category=SH&exchange=&areacode=&indcode=&orderby=mc&order=desc&current=ALL&pct=ALL&page=1&mc=ALL&volume=ALL&_=' . $time);
-        $count = optional(json_decode($client->body))->count;
+        $res = $this->client->get('/stock/screener/screen.json?category=SH&exchange=&areacode=&indcode=&orderby=mc&order=desc&current=ALL&pct=ALL&page=1&mc=ALL&volume=ALL&_=' . $time);
+        $count = optional(json_decode($res->body))->count;
         if ($count <= 0) {
             throw new \Exception('initTotalPage error');
         }
@@ -76,70 +78,56 @@ class Stock
         return $this->totalPage;
     }
 
-    public function getReqCookie()
-    {
-        return [
-            'xq_a_token' => array_get($this->cookies, 'xq_a_token', ''),
-            'xq_r_token' => array_get($this->cookies, 'xq_r_token', ''),
-            'device_id'  => array_get($this->cookies, 'device_id', ''),
-        ];
-    }
-
-
     /**
      * @param int $c
-     * @return array
      * @throws \Exception
      */
-    public function getStockList($c = 10)
+    public function getStockList(int $c = 10)
     {
         $this->initCookie();
         $this->initTotalPage();
         $j = ceil($this->totalPage / $c);
         $page = 1;
         for ($i = 1; $i <= $j; $i++) {
-            $clients = [];
+            $requests = [];
             for ($k = 1; $k <= $c; $k++) {
-                $client = new Client(self::STOCK_SEARCH_HOST, 443, true);
-                $client->setHeaders($this->headers);
-                $client->setCookies($this->getReqCookie());
-                $client->set(['timeout' => 10]);
-                $client->setDefer();
-                $time = time();
-                $client->get('/stock/screener/screen.json?category=SH&exchange=&areacode=&indcode=&orderby=symbol&order=desc&current=ALL&pct=ALL&page=' . $page . '&mc=ALL&volume=ALL&_=' . $time);
+                if ($this->totalPage < $page) {
+                    break;
+                }
+                $requests[] = [
+                    'uri' => '/stock/screener/screen.json?category=SH&exchange=&areacode=&indcode=&orderby=symbol&order=desc&current=ALL&pct=ALL&page=' . $page . '&mc=ALL&volume=ALL&_=' . time()
+                ];
                 $page++;
-                $clients[] = $client;
             }
-            $result = [];
-            foreach ($clients as $key => $client) {
-                $clients[$key]->recv();
-                $result[] = $clients[$key]->body;
-                collect($result)->each(function ($item) {
-                    $data = optional(json_decode($item));
-                    if (!is_null($data)) {
-                        if ($data->count > 0) {
-                            collect($data->list)->each(function ($item) {
-                                $code = (string)str_replace([
-                                    'SZ',
-                                    'SH',
-                                ], '', $item->symbol);
-                                echo $item->name . "\n";
-                                \Models\Stock::firstOrCreate([
-                                    'code' => $code
-                                ], [
-                                    'name' => $item->name,
-                                ]);
-                            });
-                        }
-                    } else {
-                        var_dump($data);
+            $results = $this->client->requests($requests);
+            foreach ($results as $result) {
+                $data = optional(json_decode($result->getBody()));
+                if (!is_null($data)) {
+                    if ($data->count > 0) {
+                        $this->update($data->list);
                     }
-                });
+                }
             }
+        }
+    }
+
+    public function update(array $list)
+    {
+        foreach ($list as $item) {
+            $code = (string)str_replace([
+                'SZ',
+                'SH',
+            ], '', $item->symbol);
+            echo $item->name . "\n";
+            $this->stocks[] = $item->name;
+
+            \Models\Stock::firstOrCreate([
+                'code' => $code
+            ], [
+                'name' => $item->name,
+            ]);
         }
     }
 }
 
 (new Stock())->run();
-
-
