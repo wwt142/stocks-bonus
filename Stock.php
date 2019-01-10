@@ -2,10 +2,14 @@
 
 namespace App;
 
-require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/Bootstrap.php';
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Swlib\Saber;
 use Swoole\Runtime;
+use Models\Stock as StockModel;
 
 class Stock
 {
@@ -36,8 +40,6 @@ class Stock
     public function __construct()
     {
         Runtime::enableCoroutine();
-
-        (new Database())->connect();
     }
 
     public function run()
@@ -95,7 +97,7 @@ class Stock
                     break;
                 }
                 $requests[] = [
-                    'uri' => '/stock/screener/screen.json?category=SH&exchange=&areacode=&indcode=&orderby=symbol&order=desc&current=ALL&pct=ALL&page=' . $page . '&mc=ALL&volume=ALL&_=' . time()
+                    'uri' => '/stock/screener/screen.json?category=SH&exchange=&areacode=&indcode=&orderby=symbol&order=desc&current=ALL&pct=ALL&page=' . $page . '&mc=ALL&volume=ALL&dy=ALL&pb=ALL&pettm=ALL&current=ALL&bps=ALL&roediluted=ALL&_=' . time()
                 ];
                 $page++;
             }
@@ -118,14 +120,28 @@ class Stock
                 'SZ',
                 'SH',
             ], '', $item->symbol);
+            /**
+             * @var $stock Model
+             */
+            $roe = collect($item->roediluted)->sortKeysDesc()->first(null, 0.00);
+            $stock = StockModel::where('code', $code)->first();
+            $data = [
+                'name'  => $item->name,
+                'price' => $item->current,
+                'pb'    => $item->pb,
+                'pe'    => $item->pettm,
+                'mc'    => $item->mc,
+                'roe'   => $roe,
+                'dy'    => $item->dy,
+                'code'  => $code,
+            ];
+            if ($stock) {
+                $stock->fill($data);
+                $stock->save();
+            } else {
+                StockModel::create($data);
+            }
             echo $item->name . "\n";
-            $this->stocks[] = $item->name;
-
-            \Models\Stock::firstOrCreate([
-                'code' => $code
-            ], [
-                'name' => $item->name,
-            ]);
         }
     }
 }

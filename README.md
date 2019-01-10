@@ -9,6 +9,8 @@ CREATE TABLE `stocks` (
   `code` varchar(20) COLLATE utf8mb4_bin NOT NULL DEFAULT '' COMMENT '股票代码',
   `name` varchar(100) COLLATE utf8mb4_bin NOT NULL DEFAULT '' COMMENT '股票名称',
   `price` decimal(10,2) unsigned NOT NULL DEFAULT '0.00' COMMENT '股票当前价格',
+  `mc` float(20,5) unsigned NOT NULL DEFAULT '0.00000' COMMENT '总市值(单位亿元)',
+  `dy` float(10,2) NOT NULL DEFAULT '0.00' COMMENT '当前股息率(相对历史数据计算)',
   `roe` float(10,2) NOT NULL DEFAULT '0.00' COMMENT '净资产收益率',
   `pb` float(10,2) NOT NULL DEFAULT '0.00' COMMENT '市净率',
   `pe` float(10,2) NOT NULL DEFAULT '0.00' COMMENT '市盈率',
@@ -17,8 +19,7 @@ CREATE TABLE `stocks` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_code` (`code`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
-
+) ENGINE=InnoDB AUTO_INCREMENT=3661 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `bonus` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -41,6 +42,5 @@ CREATE TABLE `bonus` (
   KEY `idx_stock_code` (`stock_code`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='红利、派息';
 
-待完善
-
 ```
+待完善

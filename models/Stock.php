@@ -18,5 +18,10 @@ class Stock extends Model
         'name',
         'price',
         'listed_at',
+        'pb',
+        'pe',
+        'mc',
+        'roe',
+        'dy',
     ];
 }
