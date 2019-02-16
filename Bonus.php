@@ -58,6 +58,11 @@ class Bonus
                     $dom->load($body);
                     $data = $dom->find('#bonus_table tbody tr');
                     $insertData = [];
+                    $bonusMoney = [];
+                    $bonus = optional($dom->find("#bonusData", 0))->text;
+                    if (!empty($bonus)) {
+                        $bonusMoney = collect(json_decode($bonus, true))->keyBy('0')->toArray();
+                    }
                     foreach ($data as $tbody) {
                         /**
                          * @var $tbody Dom
@@ -82,17 +87,17 @@ class Bonus
                                     '%',
                                     '--',
                                 ], '', $res[9]->text),
-                                'dividend_money'          => 0.00,
+                                'dividend_money'          => array_get($bonusMoney, $res[1]->text . '.1', 0.00),
                             ];
                         }
                     }
-                    if(!empty($insertData)){
-                        foreach ($insertData as $insertDatum){
-                            if(!\Models\Bonus::where('report_date', $insertDatum['report_date'])->where('stock_code', $code)->first()){
-                                $insertDatum = array_map(function ($item){
-                                    return trim($item,'--');
+                    if (!empty($insertData)) {
+                        foreach ($insertData as $insertDatum) {
+                            if (!\Models\Bonus::where('report_date', $insertDatum['report_date'])->where('stock_code', $code)->first()) {
+                                $insertDatum = array_map(function ($item) {
+                                    return trim($item, '--');
                                 }, $insertDatum);
-                                $insertDatum = collect($insertDatum)->filter(function ($item){
+                                $insertDatum = collect($insertDatum)->filter(function ($item) {
                                     return $item !== '';
                                 })->toArray();
                                 \Models\Bonus::create($insertDatum);
