@@ -23,5 +23,6 @@ class Stock extends Model
         'mc',
         'roe',
         'dy',
+        'dividend_money_total',
     ];
 }

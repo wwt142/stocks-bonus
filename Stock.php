@@ -126,14 +126,15 @@ class Stock
             $roe = collect($item->roediluted)->sortKeysDesc()->first(null, 0.00);
             $stock = StockModel::where('code', $code)->first();
             $data = [
-                'name'  => $item->name,
-                'price' => $item->current,
-                'pb'    => $item->pb,
-                'pe'    => $item->pettm,
-                'mc'    => $item->mc,
-                'roe'   => $roe,
-                'dy'    => $item->dy,
-                'code'  => $code,
+                'name'                 => $item->name,
+                'price'                => $item->current,
+                'pb'                   => $item->pb,
+                'pe'                   => $item->pettm,
+                'mc'                   => $item->mc,
+                'roe'                  => $roe,
+                'dy'                   => $item->dy,
+                'code'                 => $code,
+                'dividend_money_total' => \Models\Bonus::where('stock_code', $code)->sum('dividend_money'),
             ];
             if ($stock) {
                 $stock->fill($data);
